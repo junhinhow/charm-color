@@ -1,4 +1,9 @@
 // Package color fornece utilitarios de manipulacao de cores para UIs de terminal.
+//
+// As cores são manipuladas no modelo de alfa reto (straight alpha, NRGBA): o
+// canal alfa nunca é aplicado aos canais RGB. Isso evita que operações como
+// escurecer, clarear e misturar escureçam silenciosamente as cores com
+// transparência.
 package color
 
 import (
@@ -11,53 +16,56 @@ import (
 )
 
 // Darken escurece a cor pelo fator amount (0.0 a 1.0).
+//
+// A cor é convertida para alfa reto antes da operação, portanto o canal alfa
+// é preservado e Darken(c, 0) devolve a própria cor.
 func Darken(c color.Color, amount float64) color.Color {
-	r, g, b, a := c.RGBA()
-	factor := clamp(1.0 - amount)
+	n := paraNRGBA(c)
+	fator := clamp(1.0 - amount)
 	return color.NRGBA{
-		R: uint8(float64(r>>8) * factor),
-		G: uint8(float64(g>>8) * factor),
-		B: uint8(float64(b>>8) * factor),
-		A: uint8(a >> 8),
+		R: uint8(float64(n.R) * fator),
+		G: uint8(float64(n.G) * fator),
+		B: uint8(float64(n.B) * fator),
+		A: n.A,
 	}
 }
 
 // Lighten clareia a cor pelo fator amount (0.0 a 1.0).
+//
+// A cor é convertida para alfa reto antes da operação, portanto o canal alfa
+// é preservado e Lighten(c, 0) devolve a própria cor.
 func Lighten(c color.Color, amount float64) color.Color {
-	r, g, b, a := c.RGBA()
-	rf := float64(r >> 8)
-	gf := float64(g >> 8)
-	bf := float64(b >> 8)
+	n := paraNRGBA(c)
 	amt := clamp(amount)
 	return color.NRGBA{
-		R: uint8(rf + (255-rf)*amt),
-		G: uint8(gf + (255-gf)*amt),
-		B: uint8(bf + (255-bf)*amt),
-		A: uint8(a >> 8),
+		R: uint8(float64(n.R) + (255-float64(n.R))*amt),
+		G: uint8(float64(n.G) + (255-float64(n.G))*amt),
+		B: uint8(float64(n.B) + (255-float64(n.B))*amt),
+		A: n.A,
 	}
 }
 
 // Blend interpola entre c1 e c2 pelo fator t (0.0 = c1, 1.0 = c2).
 func Blend(c1, c2 color.Color, t float64) color.Color {
 	t = clamp(t)
-	r1, g1, b1, a1 := c1.RGBA()
-	r2, g2, b2, a2 := c2.RGBA()
+	a := paraNRGBA(c1)
+	b := paraNRGBA(c2)
 	return color.NRGBA{
-		R: uint8(lerp(float64(r1>>8), float64(r2>>8), t)),
-		G: uint8(lerp(float64(g1>>8), float64(g2>>8), t)),
-		B: uint8(lerp(float64(b1>>8), float64(b2>>8), t)),
-		A: uint8(lerp(float64(a1>>8), float64(a2>>8), t)),
+		R: uint8(lerp(float64(a.R), float64(b.R), t)),
+		G: uint8(lerp(float64(a.G), float64(b.G), t)),
+		B: uint8(lerp(float64(a.B), float64(b.B), t)),
+		A: uint8(lerp(float64(a.A), float64(b.A), t)),
 	}
 }
 
 // Contrast retorna preto ou branco dependendo da luminancia da cor,
 // garantindo legibilidade do texto.
 func Contrast(c color.Color) color.Color {
-	r, g, b, _ := c.RGBA()
+	n := paraNRGBA(c)
 	// Luminancia relativa (formula WCAG)
-	lum := 0.2126*srgbToLinear(float64(r>>8)/255) +
-		0.7152*srgbToLinear(float64(g>>8)/255) +
-		0.0722*srgbToLinear(float64(b>>8)/255)
+	lum := 0.2126*srgbToLinear(float64(n.R)/255) +
+		0.7152*srgbToLinear(float64(n.G)/255) +
+		0.0722*srgbToLinear(float64(n.B)/255)
 	if lum > 0.179 {
 		return color.NRGBA{R: 0, G: 0, B: 0, A: 255}
 	}
@@ -66,34 +74,38 @@ func Contrast(c color.Color) color.Color {
 
 // Complementary retorna a cor complementar (oposta na roda de cores).
 func Complementary(c color.Color) color.Color {
-	r, g, b, a := c.RGBA()
+	n := paraNRGBA(c)
 	return color.NRGBA{
-		R: uint8(255 - r>>8),
-		G: uint8(255 - g>>8),
-		B: uint8(255 - b>>8),
-		A: uint8(a >> 8),
+		R: 255 - n.R,
+		G: 255 - n.G,
+		B: 255 - n.B,
+		A: n.A,
 	}
 }
 
 // Palette gera uma paleta harmoniosa de n cores a partir de uma cor base,
-// rotacionando o hue uniformemente.
+// rotacionando o hue uniformemente. O alfa da cor base é preservado.
 func Palette(base color.Color, n int) []color.Color {
 	if n <= 0 {
 		return nil
 	}
-	h, s, l := rgbToHSL(base)
+	nb := paraNRGBA(base)
+	h, s, l := rgbToHSL(nb)
 	palette := make([]color.Color, n)
 	for i := 0; i < n; i++ {
 		hue := math.Mod(h+float64(i)*(360.0/float64(n)), 360)
-		palette[i] = hslToRGB(hue, s, l)
+		palette[i] = hslToNRGBA(hue, s, l, nb.A)
 	}
 	return palette
 }
 
 // ToHex converte uma cor para representacao hexadecimal (#RRGGBB).
+//
+// O canal alfa é ignorado: os canais RGB são os valores retos (sem
+// multiplicação pelo alfa).
 func ToHex(c color.Color) string {
-	r, g, b, _ := c.RGBA()
-	return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
+	n := paraNRGBA(c)
+	return fmt.Sprintf("#%02x%02x%02x", n.R, n.G, n.B)
 }
 
 // FromHex converte uma string hexadecimal (#RRGGBB ou RRGGBB) para color.Color.
@@ -119,6 +131,28 @@ func FromLipgloss(s string) color.Color {
 
 // --- funcoes auxiliares ---
 
+// paraNRGBA converte qualquer color.Color para color.NRGBA preservando o alfa.
+//
+// O método RGBA() devolve canais pré-multiplicados pelo alfa; o modelo NRGBA
+// devolve os canais retos, que são os que devem ser usados nas operações de
+// cor.
+func paraNRGBA(c color.Color) color.NRGBA {
+	switch v := c.(type) {
+	case nil:
+		return color.NRGBA{A: 255}
+	case color.NRGBA:
+		return v
+	case color.NRGBA64:
+		return color.NRGBA{
+			R: uint8(v.R >> 8),
+			G: uint8(v.G >> 8),
+			B: uint8(v.B >> 8),
+			A: uint8(v.A >> 8),
+		}
+	}
+	return color.NRGBAModel.Convert(c).(color.NRGBA)
+}
+
 func clamp(v float64) float64 {
 	if v < 0 {
 		return 0
@@ -141,10 +175,10 @@ func srgbToLinear(v float64) float64 {
 }
 
 func rgbToHSL(c color.Color) (h, s, l float64) {
-	r, g, b, _ := c.RGBA()
-	rf := float64(r>>8) / 255
-	gf := float64(g>>8) / 255
-	bf := float64(b>>8) / 255
+	n := paraNRGBA(c)
+	rf := float64(n.R) / 255
+	gf := float64(n.G) / 255
+	bf := float64(n.B) / 255
 
 	max := math.Max(rf, math.Max(gf, bf))
 	min := math.Min(rf, math.Min(gf, bf))
@@ -176,10 +210,11 @@ func rgbToHSL(c color.Color) (h, s, l float64) {
 	return h, s, l
 }
 
-func hslToRGB(h, s, l float64) color.Color {
+// hslToNRGBA converte HSL para uma cor de alfa reto com o alfa informado.
+func hslToNRGBA(h, s, l float64, a uint8) color.NRGBA {
 	if s == 0 {
 		v := uint8(l * 255)
-		return color.NRGBA{R: v, G: v, B: v, A: 255}
+		return color.NRGBA{R: v, G: v, B: v, A: a}
 	}
 
 	var q float64
@@ -197,10 +232,10 @@ func hslToRGB(h, s, l float64) color.Color {
 	b := hueToRGB(p, q, hNorm-1.0/3.0)
 
 	return color.NRGBA{
-		R: uint8(math.Round(r * 255)),
-		G: uint8(math.Round(g * 255)),
-		B: uint8(math.Round(b * 255)),
-		A: 255,
+		R: uint8(r * 255),
+		G: uint8(g * 255),
+		B: uint8(b * 255),
+		A: a,
 	}
 }
 

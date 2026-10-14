@@ -108,3 +108,104 @@ func TestFromHexInvalid(t *testing.T) {
 		t.Error("FromHex invalido deveria retornar preto")
 	}
 }
+
+// --- regressões ---
+
+// TestToHexIgnoraPreMultiplicacao garante que os canais RGB não sejam lidos
+// do valor pré-multiplicado devolvido por RGBA().
+func TestToHexIgnoraPreMultiplicacao(t *testing.T) {
+	// color.NRGBA é alfa reto: RGBA() devolve 32896 (isto é, 128 pré-
+	// multiplicado), mas os canais retos são 255, 0 e 0.
+	if got := ToHex(color.NRGBA{R: 255, G: 0, B: 0, A: 128}); got != "#ff0000" {
+		t.Errorf("ToHex de NRGBA{255,0,0,128} = %s, esperado #ff0000", got)
+	}
+}
+
+// TestToHexNaoUsaValorPreMultiplicado cobre color.RGBA, que é documentado
+// como alfa pré-multiplicado. A tolerância existe porque a precisão da
+// conversão depende da implementação de image/color da versão do Go.
+func TestToHexNaoUsaValorPreMultiplicado(t *testing.T) {
+	got := paraNRGBA(color.RGBA{R: 255, G: 0, B: 0, A: 128})
+
+	if got.G != 0 || got.B != 0 {
+		t.Errorf("ToHex de RGBA{255,0,0,128} = %v, esperado canais G e B zerados", got)
+	}
+	if got.R < 253 || got.R > 255 {
+		t.Errorf("ToHex de RGBA{255,0,0,128} = %v, esperado R próximo de 255", got)
+	}
+	if got.A != 128 {
+		t.Errorf("alfa = %d, esperado 128", got.A)
+	}
+}
+
+// TestDarkenIdentidade verifica que Darken(c, 0) devolve a própria cor.
+func TestDarkenIdentidade(t *testing.T) {
+	c := color.NRGBA{R: 255, G: 0, B: 0, A: 128}
+
+	escuro := paraNRGBA(Darken(c, 0))
+	if escuro != c {
+		t.Errorf("Darken(c, 0) = %v, esperado %v", escuro, c)
+	}
+}
+
+// TestLightenIdentidade verifica que Lighten(c, 0) devolve a própria cor.
+func TestLightenIdentidade(t *testing.T) {
+	c := color.NRGBA{R: 255, G: 0, B: 0, A: 128}
+
+	claro := paraNRGBA(Lighten(c, 0))
+	if claro != c {
+		t.Errorf("Lighten(c, 0) = %v, esperado %v", claro, c)
+	}
+}
+
+func TestDarkenPreservaAlfa(t *testing.T) {
+	escuro := paraNRGBA(Darken(color.NRGBA{R: 255, G: 0, B: 0, A: 128}, 0.5))
+	if escuro.A != 128 {
+		t.Errorf("alfa = %d, esperado 128", escuro.A)
+	}
+}
+
+func TestLightenPreservaAlfa(t *testing.T) {
+	claro := paraNRGBA(Lighten(color.NRGBA{R: 255, G: 0, B: 0, A: 128}, 0.5))
+	if claro.A != 128 {
+		t.Errorf("alfa = %d, esperado 128", claro.A)
+	}
+}
+
+func TestBlendPreservaAlfa(t *testing.T) {
+	a := color.NRGBA{R: 255, G: 0, B: 0, A: 128}
+	b := color.NRGBA{R: 0, G: 0, B: 255, A: 0}
+
+	mistura := paraNRGBA(Blend(a, b, 0.5))
+	if mistura.A != 64 {
+		t.Errorf("alfa = %d, esperado 64", mistura.A)
+	}
+}
+
+// TestContrastIgnoraPreMultiplicacao garante que o contraste use os canais
+// retos: um vermelho com transparência não pode virar marrom escuro.
+func TestContrastIgnoraPreMultiplicacao(t *testing.T) {
+	contraste := paraNRGBA(Contrast(color.NRGBA{R: 255, G: 0, B: 0, A: 128}))
+	if contraste.R != 0 || contraste.G != 0 || contraste.B != 0 {
+		t.Errorf("Contrast de vermelho = %v, esperado preto", contraste)
+	}
+}
+
+func TestPalettePreservaAlfa(t *testing.T) {
+	paleta := Palette(color.NRGBA{R: 255, G: 0, B: 0, A: 128}, 3)
+	for i, c := range paleta {
+		if n := paraNRGBA(c); n.A != 128 {
+			t.Errorf("alfa da cor %d da paleta = %d, esperado 128", i, n.A)
+		}
+	}
+}
+
+func TestOperacoesComCorNaoNula(t *testing.T) {
+	// Uma cor nil não deve entrar em panic.
+	if got := ToHex(nil); got != "#000000" {
+		t.Errorf("ToHex(nil) = %s, esperado #000000", got)
+	}
+	if got := paraNRGBA(Darken(nil, 0.5)); got.A != 255 {
+		t.Errorf("Darken(nil, 0.5) alfa = %d, esperado 255", got.A)
+	}
+}
