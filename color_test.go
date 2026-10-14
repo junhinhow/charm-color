@@ -232,8 +232,8 @@ func TestFromHexEInvalido(t *testing.T) {
 	invalidos := []string{"", "#", "invalid", "#fff", "#12345", "1234567", "#gggggg", "#ff00zz00"}
 
 	for _, entrada := range invalidos {
-		if _, err := FromHexE(entrada); !errors.Is(err, ErrHexInvalido) {
-			t.Errorf("FromHexE(%q) devolveu %v, esperado ErrHexInvalido", entrada, err)
+		if _, err := FromHexE(entrada); !errors.Is(err, ErrInvalidHex) {
+			t.Errorf("FromHexE(%q) devolveu %v, esperado ErrInvalidHex", entrada, err)
 		}
 	}
 }

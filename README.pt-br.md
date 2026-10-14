@@ -1,4 +1,4 @@
-# charm-color
+﻿# charm-color
 
 Utilitários de manipulação de cores para UIs de terminal -- escurecer, clarear, misturar, contraste e mais.
 
@@ -65,7 +65,7 @@ inválida. `FromHexE` valida o formato e devolve um erro:
 
 ```go
 c, err := charmcolor.FromHexE("#ff000080") // #RRGGBBAA é aceito
-if errors.Is(err, charmcolor.ErrHexInvalido) {
+if errors.Is(err, charmcolor.ErrInvalidHex) {
     // trata a entrada inválida
 }
 ```
@@ -86,7 +86,7 @@ Formatos aceitos: `#RRGGBB`, `RRGGBB`, `#RRGGBBAA` e `RRGGBBAA`.
 | `ToHex(c)` | Converte a cor para a string `#RRGGBB` |
 | `ToHexA(c)` | Converte a cor para a string `#RRGGBBAA` (com alfa) |
 | `FromHex(hex)` | Converte `#RRGGBB` ou `RRGGBB` para cor (preto se inválido) |
-| `FromHexE(hex)` | O mesmo, mas devolve `ErrHexInvalido` para formato inválido |
+| `FromHexE(hex)` | O mesmo, mas devolve `ErrInvalidHex` para formato inválido |
 | `FromLipgloss(s)` | Converte uma string hex/ANSI usando `lipgloss.Color` |
 
 ## Licença

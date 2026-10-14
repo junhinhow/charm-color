@@ -25,9 +25,9 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// ErrHexInvalido indica que uma string hexadecimal não pôde ser convertida em
+// ErrInvalidHex indica que uma string hexadecimal não pôde ser convertida em
 // cor. Use errors.Is para detectá-lo.
-var ErrHexInvalido = errors.New("color: valor hexadecimal inválido")
+var ErrInvalidHex = errors.New("color: valor hexadecimal inválido")
 
 // Darken escurece a cor pelo fator amount (0.0 a 1.0).
 //
@@ -155,17 +155,17 @@ func FromHex(hex string) color.Color {
 // FromHexE converte uma string hexadecimal para color.Color validando o
 // formato. São aceitos #RRGGBB, RRGGBB, #RRGGBBAA e RRGGBBAA.
 //
-// Devolve [ErrHexInvalido] quando a string não representa um hexadecimal
+// Devolve [ErrInvalidHex] quando a string não representa um hexadecimal
 // válido.
 func FromHexE(hex string) (color.Color, error) {
 	s := strings.TrimPrefix(strings.TrimSpace(hex), "#")
 	if len(s) != 6 && len(s) != 8 {
-		return nil, fmt.Errorf("%w: %q não tem 6 nem 8 dígitos hexadecimais", ErrHexInvalido, hex)
+		return nil, fmt.Errorf("%w: %q não tem 6 nem 8 dígitos hexadecimais", ErrInvalidHex, hex)
 	}
 
 	valor, err := strconv.ParseUint(s, 16, 64)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %q não é um número hexadecimal válido", ErrHexInvalido, hex)
+		return nil, fmt.Errorf("%w: %q não é um número hexadecimal válido", ErrInvalidHex, hex)
 	}
 
 	if len(s) == 6 {
