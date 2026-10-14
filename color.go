@@ -7,13 +7,19 @@
 package color
 
 import (
+	"errors"
 	"fmt"
 	"image/color"
 	"math"
+	"strconv"
 	"strings"
 
 	"charm.land/lipgloss/v2"
 )
+
+// ErrHexInvalido indica que uma string hexadecimal não pôde ser convertida em
+// cor. Use errors.Is para detectá-lo.
+var ErrHexInvalido = errors.New("color: valor hexadecimal inválido")
 
 // Darken escurece a cor pelo fator amount (0.0 a 1.0).
 //
@@ -113,25 +119,62 @@ func Palette(base color.Color, n int) []color.Color {
 // ToHex converte uma cor para representacao hexadecimal (#RRGGBB).
 //
 // O canal alfa é ignorado: os canais RGB são os valores retos (sem
-// multiplicação pelo alfa).
+// multiplicação pelo alfa). Use [ToHexA] para incluir o alfa.
 func ToHex(c color.Color) string {
 	n := paraNRGBA(c)
 	return fmt.Sprintf("#%02x%02x%02x", n.R, n.G, n.B)
 }
 
+// ToHexA converte uma cor para representacao hexadecimal (#RRGGBBAA),
+// incluindo o canal alfa.
+func ToHexA(c color.Color) string {
+	n := paraNRGBA(c)
+	return fmt.Sprintf("#%02x%02x%02x%02x", n.R, n.G, n.B, n.A)
+}
+
 // FromHex converte uma string hexadecimal (#RRGGBB ou RRGGBB) para color.Color.
 // Retorna preto se o formato for invalido.
+//
+// Use [FromHexE] para receber o erro do formato inválido.
 func FromHex(hex string) color.Color {
-	hex = strings.TrimPrefix(hex, "#")
-	if len(hex) != 6 {
-		return color.NRGBA{A: 255}
-	}
-	var r, g, b uint8
-	_, err := fmt.Sscanf(hex, "%02x%02x%02x", &r, &g, &b)
+	c, err := FromHexE(hex)
 	if err != nil {
 		return color.NRGBA{A: 255}
 	}
-	return color.NRGBA{R: r, G: g, B: b, A: 255}
+	return c
+}
+
+// FromHexE converte uma string hexadecimal para color.Color validando o
+// formato. São aceitos #RRGGBB, RRGGBB, #RRGGBBAA e RRGGBBAA.
+//
+// Devolve [ErrHexInvalido] quando a string não representa um hexadecimal
+// válido.
+func FromHexE(hex string) (color.Color, error) {
+	s := strings.TrimPrefix(strings.TrimSpace(hex), "#")
+	if len(s) != 6 && len(s) != 8 {
+		return nil, fmt.Errorf("%w: %q não tem 6 nem 8 dígitos hexadecimais", ErrHexInvalido, hex)
+	}
+
+	valor, err := strconv.ParseUint(s, 16, 64)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %q não é um número hexadecimal válido", ErrHexInvalido, hex)
+	}
+
+	if len(s) == 6 {
+		return color.NRGBA{
+			R: uint8(valor >> 16),
+			G: uint8(valor >> 8),
+			B: uint8(valor),
+			A: 255,
+		}, nil
+	}
+
+	return color.NRGBA{
+		R: uint8(valor >> 24),
+		G: uint8(valor >> 16),
+		B: uint8(valor >> 8),
+		A: uint8(valor),
+	}, nil
 }
 
 // FromLipgloss converte uma string hex/ANSI usando lipgloss.Color para color.Color.

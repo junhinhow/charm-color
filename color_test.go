@@ -1,6 +1,7 @@
 package color
 
 import (
+	"errors"
 	"image/color"
 	"testing"
 )
@@ -221,6 +222,52 @@ func TestPalettePreservaAlfa(t *testing.T) {
 	}
 }
 
+func TestToHexA(t *testing.T) {
+	if got := ToHexA(color.NRGBA{R: 255, G: 0, B: 0, A: 128}); got != "#ff000080" {
+		t.Errorf("ToHexA = %s, esperado #ff000080", got)
+	}
+}
+
+func TestFromHexEInvalido(t *testing.T) {
+	invalidos := []string{"", "#", "invalid", "#fff", "#12345", "1234567", "#gggggg", "#ff00zz00"}
+
+	for _, entrada := range invalidos {
+		if _, err := FromHexE(entrada); !errors.Is(err, ErrHexInvalido) {
+			t.Errorf("FromHexE(%q) devolveu %v, esperado ErrHexInvalido", entrada, err)
+		}
+	}
+}
+
+func TestFromHexEComAlfa(t *testing.T) {
+	c, err := FromHexE("#ff000080")
+	if err != nil {
+		t.Fatalf("FromHexE devolveu %v", err)
+	}
+	n := paraNRGBA(c)
+	if n.R != 255 || n.G != 0 || n.B != 0 || n.A != 128 {
+		t.Errorf("FromHexE(#ff000080) = %v, esperado (255,0,0,128)", n)
+	}
+}
+
+func TestFromHexEValido(t *testing.T) {
+	c, err := FromHexE("#ff8000")
+	if err != nil {
+		t.Fatalf("FromHexE devolveu %v", err)
+	}
+	n := paraNRGBA(c)
+	if n.R != 255 || n.G != 128 || n.B != 0 || n.A != 255 {
+		t.Errorf("FromHexE(#ff8000) = %v, esperado (255,128,0,255)", n)
+	}
+}
+
+// TestFromHexInvalidoMantemPreto garante a compatibilidade de FromHex.
+func TestFromHexInvalidoMantemPreto(t *testing.T) {
+	n := paraNRGBA(FromHex("xyz"))
+	if n.R != 0 || n.G != 0 || n.B != 0 {
+		t.Errorf("FromHex invalido = %v, esperado preto", n)
+	}
+}
+
 // TestComplementarReal verifica o complementar no espaço HSL (matiz + 180º).
 func TestComplementarReal(t *testing.T) {
 	casos := []struct {
@@ -233,7 +280,10 @@ func TestComplementarReal(t *testing.T) {
 	}
 
 	for _, caso := range casos {
-		base := FromHex(caso.entrada)
+		base, err := FromHexE(caso.entrada)
+		if err != nil {
+			t.Fatalf("FromHexE(%q) devolveu %v", caso.entrada, err)
+		}
 		if got := ToHex(Complementary(base)); got != caso.esperado {
 			t.Errorf("Complementary(%s) = %s, esperado %s", caso.entrada, got, caso.esperado)
 		}
