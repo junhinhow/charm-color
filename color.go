@@ -72,8 +72,19 @@ func Contrast(c color.Color) color.Color {
 	return color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 }
 
-// Complementary retorna a cor complementar (oposta na roda de cores).
+// Complementary retorna a cor complementar, ou seja, a oposta na roda de
+// cores (matiz deslocado em 180 graus). O alfa é preservado.
 func Complementary(c color.Color) color.Color {
+	n := paraNRGBA(c)
+	h, s, l := rgbToHSL(n)
+	return hslToNRGBA(math.Mod(h+180, 360), s, l, n.A)
+}
+
+// Inverse inverte os canais RGB da cor (255 - canal), preservando o alfa.
+//
+// Esta é a inversão de componentes, não o complementar: use [Complementary]
+// para a cor oposta na roda de cores.
+func Inverse(c color.Color) color.Color {
 	n := paraNRGBA(c)
 	return color.NRGBA{
 		R: 255 - n.R,

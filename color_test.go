@@ -221,6 +221,43 @@ func TestPalettePreservaAlfa(t *testing.T) {
 	}
 }
 
+// TestComplementarReal verifica o complementar no espaço HSL (matiz + 180º).
+func TestComplementarReal(t *testing.T) {
+	casos := []struct {
+		entrada  string
+		esperado string
+	}{
+		{"#402080", "#608020"},
+		{"#00a0b0", "#b01000"},
+		{"#f0e68c", "#8c96f0"},
+	}
+
+	for _, caso := range casos {
+		base := FromHex(caso.entrada)
+		if got := ToHex(Complementary(base)); got != caso.esperado {
+			t.Errorf("Complementary(%s) = %s, esperado %s", caso.entrada, got, caso.esperado)
+		}
+	}
+}
+
+func TestComplementarPreservaAlfa(t *testing.T) {
+	comp := paraNRGBA(Complementary(color.NRGBA{R: 255, G: 0, B: 0, A: 128}))
+	if comp.A != 128 {
+		t.Errorf("alfa = %d, esperado 128", comp.A)
+	}
+}
+
+// TestInverse verifica a inversão dos canais RGB.
+func TestInverse(t *testing.T) {
+	invertida := paraNRGBA(Inverse(color.NRGBA{R: 0x40, G: 0x20, B: 0x80, A: 128}))
+	if invertida.R != 0xbf || invertida.G != 0xdf || invertida.B != 0x7f {
+		t.Errorf("Inverse = %v, esperado (191,223,127)", invertida)
+	}
+	if invertida.A != 128 {
+		t.Errorf("alfa = %d, esperado 128", invertida.A)
+	}
+}
+
 func TestOperacoesComCorNaoNula(t *testing.T) {
 	// Uma cor nil não deve entrar em panic.
 	if got := ToHex(nil); got != "#000000" {
