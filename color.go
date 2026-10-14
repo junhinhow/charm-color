@@ -23,9 +23,9 @@ func Darken(c color.Color, amount float64) color.Color {
 	n := paraNRGBA(c)
 	fator := clamp(1.0 - amount)
 	return color.NRGBA{
-		R: uint8(float64(n.R) * fator),
-		G: uint8(float64(n.G) * fator),
-		B: uint8(float64(n.B) * fator),
+		R: paraUint8(float64(n.R) * fator),
+		G: paraUint8(float64(n.G) * fator),
+		B: paraUint8(float64(n.B) * fator),
 		A: n.A,
 	}
 }
@@ -38,9 +38,9 @@ func Lighten(c color.Color, amount float64) color.Color {
 	n := paraNRGBA(c)
 	amt := clamp(amount)
 	return color.NRGBA{
-		R: uint8(float64(n.R) + (255-float64(n.R))*amt),
-		G: uint8(float64(n.G) + (255-float64(n.G))*amt),
-		B: uint8(float64(n.B) + (255-float64(n.B))*amt),
+		R: paraUint8(float64(n.R) + (255-float64(n.R))*amt),
+		G: paraUint8(float64(n.G) + (255-float64(n.G))*amt),
+		B: paraUint8(float64(n.B) + (255-float64(n.B))*amt),
 		A: n.A,
 	}
 }
@@ -51,10 +51,10 @@ func Blend(c1, c2 color.Color, t float64) color.Color {
 	a := paraNRGBA(c1)
 	b := paraNRGBA(c2)
 	return color.NRGBA{
-		R: uint8(lerp(float64(a.R), float64(b.R), t)),
-		G: uint8(lerp(float64(a.G), float64(b.G), t)),
-		B: uint8(lerp(float64(a.B), float64(b.B), t)),
-		A: uint8(lerp(float64(a.A), float64(b.A), t)),
+		R: paraUint8(lerp(float64(a.R), float64(b.R), t)),
+		G: paraUint8(lerp(float64(a.G), float64(b.G), t)),
+		B: paraUint8(lerp(float64(a.B), float64(b.B), t)),
+		A: paraUint8(lerp(float64(a.A), float64(b.A), t)),
 	}
 }
 
@@ -153,6 +153,19 @@ func paraNRGBA(c color.Color) color.NRGBA {
 	return color.NRGBAModel.Convert(c).(color.NRGBA)
 }
 
+// paraUint8 converte um valor de canal para uint8 arredondando e limitando ao
+// intervalo válido.
+func paraUint8(v float64) uint8 {
+	r := math.Round(v)
+	if r <= 0 {
+		return 0
+	}
+	if r >= 255 {
+		return 255
+	}
+	return uint8(r)
+}
+
 func clamp(v float64) float64 {
 	if v < 0 {
 		return 0
@@ -213,7 +226,7 @@ func rgbToHSL(c color.Color) (h, s, l float64) {
 // hslToNRGBA converte HSL para uma cor de alfa reto com o alfa informado.
 func hslToNRGBA(h, s, l float64, a uint8) color.NRGBA {
 	if s == 0 {
-		v := uint8(l * 255)
+		v := paraUint8(l * 255)
 		return color.NRGBA{R: v, G: v, B: v, A: a}
 	}
 
@@ -232,9 +245,9 @@ func hslToNRGBA(h, s, l float64, a uint8) color.NRGBA {
 	b := hueToRGB(p, q, hNorm-1.0/3.0)
 
 	return color.NRGBA{
-		R: uint8(r * 255),
-		G: uint8(g * 255),
-		B: uint8(b * 255),
+		R: paraUint8(r * 255),
+		G: paraUint8(g * 255),
+		B: paraUint8(b * 255),
 		A: a,
 	}
 }

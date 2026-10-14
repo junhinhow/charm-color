@@ -163,6 +163,9 @@ func TestDarkenPreservaAlfa(t *testing.T) {
 	if escuro.A != 128 {
 		t.Errorf("alfa = %d, esperado 128", escuro.A)
 	}
+	if escuro.R != 128 {
+		t.Errorf("canal R = %d, esperado 128", escuro.R)
+	}
 }
 
 func TestLightenPreservaAlfa(t *testing.T) {
@@ -179,6 +182,24 @@ func TestBlendPreservaAlfa(t *testing.T) {
 	mistura := paraNRGBA(Blend(a, b, 0.5))
 	if mistura.A != 64 {
 		t.Errorf("alfa = %d, esperado 64", mistura.A)
+	}
+	if mistura.R != 128 {
+		t.Errorf("canal R = %d, esperado 128", mistura.R)
+	}
+}
+
+// TestArredondamento verifica que as operações arredondam em vez de truncar.
+func TestArredondamento(t *testing.T) {
+	branco := color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+
+	escuro := paraNRGBA(Darken(branco, 0.5))
+	if escuro.R != 128 {
+		t.Errorf("Darken(branco, 0.5) = %d, esperado 128 (arredondado)", escuro.R)
+	}
+
+	mistura := paraNRGBA(Blend(color.NRGBA{A: 255}, branco, 0.5))
+	if mistura.R != 128 {
+		t.Errorf("Blend(preto, branco, 0.5) = %d, esperado 128 (arredondado)", mistura.R)
 	}
 }
 
