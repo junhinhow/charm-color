@@ -4,6 +4,14 @@
 // canal alfa nunca é aplicado aos canais RGB. Isso evita que operações como
 // escurecer, clarear e misturar escureçam silenciosamente as cores com
 // transparência.
+//
+// O nome do pacote é `color`, o mesmo de `image/color`. Ao importar os dois,
+// use um alias para o pacote deste repositório:
+//
+//	import (
+//		"image/color"
+//		charmcolor "github.com/junhinhow/charm-color"
+//	)
 package color
 
 import (

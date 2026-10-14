@@ -2,7 +2,7 @@
 
 Color manipulation utilities for terminal UIs -- darken, lighten, blend, contrast, and more.
 
-> **[Leia em Portugues](README.pt-br.md)**
+> **[Leia em Português](README.pt-br.md)**
 
 ## Install
 
@@ -12,6 +12,9 @@ go get github.com/junhinhow/charm-color@latest
 
 ## Usage
 
+The package is named `color`, the same as `image/color`. When you import both,
+give this package an alias:
+
 ```go
 package main
 
@@ -19,42 +22,75 @@ import (
     "fmt"
     "image/color"
 
-    cc "github.com/junhinhow/charm-color"
+    charmcolor "github.com/junhinhow/charm-color"
 )
 
 func main() {
     red := color.NRGBA{R: 255, G: 0, B: 0, A: 255}
 
-    dark := cc.Darken(red, 0.3)
-    light := cc.Lighten(red, 0.3)
-    comp := cc.Complementary(red)
-    text := cc.Contrast(red)
-    hex := cc.ToHex(dark)
+    dark := charmcolor.Darken(red, 0.3)
+    light := charmcolor.Lighten(red, 0.3)
+    comp := charmcolor.Complementary(red)
+    text := charmcolor.Contrast(red)
+    hex := charmcolor.ToHex(dark)
 
     fmt.Println("Dark red:", hex)
-    fmt.Println("Light red:", cc.ToHex(light))
-    fmt.Println("Complement:", cc.ToHex(comp))
-    fmt.Println("Text color:", cc.ToHex(text))
+    fmt.Println("Light red:", charmcolor.ToHex(light))
+    fmt.Println("Complement:", charmcolor.ToHex(comp))
+    fmt.Println("Text color:", charmcolor.ToHex(text))
 
-    palette := cc.Palette(red, 5)
+    palette := charmcolor.Palette(red, 5)
     for i, c := range palette {
-        fmt.Printf("  Palette[%d]: %s\n", i, cc.ToHex(c))
+        fmt.Printf("  Palette[%d]: %s\n", i, charmcolor.ToHex(c))
     }
 }
 ```
+
+## Alpha handling
+
+Colors are handled in the **straight alpha** model (`color.NRGBA`): the alpha
+channel is never multiplied into the RGB channels.
+
+```go
+// The RGB channels are the straight ones and the alpha is preserved.
+charmcolor.ToHex(color.NRGBA{R: 255, G: 0, B: 0, A: 128})            // "#ff0000"
+charmcolor.ToHexA(color.NRGBA{R: 255, G: 0, B: 0, A: 128})           // "#ff000080"
+charmcolor.ToHex(charmcolor.Darken(color.NRGBA{255, 0, 0, 128}, 0))  // "#ff0000" (identity)
+```
+
+`ToHex` ignores the alpha channel (`#RRGGBB`); use `ToHexA` (`#RRGGBBAA`) to
+keep it.
+
+## Parsing hex values
+
+`FromHex` keeps the original behavior and returns black for an invalid input.
+`FromHexE` validates the format and returns an error instead:
+
+```go
+c, err := charmcolor.FromHexE("#ff000080") // #RRGGBBAA is supported
+if errors.Is(err, charmcolor.ErrHexInvalido) {
+    // handle the invalid input
+}
+```
+
+Accepted formats: `#RRGGBB`, `RRGGBB`, `#RRGGBBAA` and `RRGGBBAA`.
 
 ## API
 
 | Function | Description |
 |----------|-------------|
-| `Darken(c, amount)` | Darken a color by a factor (0.0-1.0) |
-| `Lighten(c, amount)` | Lighten a color by a factor (0.0-1.0) |
+| `Darken(c, amount)` | Darken a color by a factor (0.0-1.0), preserving the alpha |
+| `Lighten(c, amount)` | Lighten a color by a factor (0.0-1.0), preserving the alpha |
 | `Blend(c1, c2, t)` | Interpolate between two colors |
 | `Contrast(c)` | Returns black or white for text readability |
-| `Complementary(c)` | Returns the complementary (opposite) color |
+| `Complementary(c)` | Returns the complementary color (hue rotated by 180°) |
+| `Inverse(c)` | Inverts the RGB channels (`255 - channel`) |
 | `Palette(base, n)` | Generates n harmonious colors by hue rotation |
 | `ToHex(c)` | Convert color to `#RRGGBB` string |
-| `FromHex(hex)` | Parse `#RRGGBB` or `RRGGBB` to color |
+| `ToHexA(c)` | Convert color to `#RRGGBBAA` string (with alpha) |
+| `FromHex(hex)` | Parse `#RRGGBB` or `RRGGBB` to color (black on invalid input) |
+| `FromHexE(hex)` | Same, but returns `ErrHexInvalido` for an invalid format |
+| `FromLipgloss(s)` | Convert a hex/ANSI string using `lipgloss.Color` |
 
 ## License
 
