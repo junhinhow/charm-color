@@ -247,22 +247,22 @@ func rgbToHSL(c color.Color) (h, s, l float64) {
 	gf := float64(n.G) / 255
 	bf := float64(n.B) / 255
 
-	max := math.Max(rf, math.Max(gf, bf))
-	min := math.Min(rf, math.Min(gf, bf))
-	l = (max + min) / 2
+	maxCanal := max(rf, max(gf, bf))
+	minCanal := min(rf, min(gf, bf))
+	l = (maxCanal + minCanal) / 2
 
-	if max == min {
+	if maxCanal == minCanal {
 		return 0, 0, l
 	}
 
-	d := max - min
+	d := maxCanal - minCanal
 	if l > 0.5 {
-		s = d / (2 - max - min)
+		s = d / (2 - maxCanal - minCanal)
 	} else {
-		s = d / (max + min)
+		s = d / (maxCanal + minCanal)
 	}
 
-	switch max {
+	switch maxCanal {
 	case rf:
 		h = (gf - bf) / d
 		if gf < bf {
